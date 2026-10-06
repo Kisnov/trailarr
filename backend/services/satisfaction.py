@@ -58,6 +58,10 @@ class ProfileSatisfaction:
     nothing for it yet — the refresh task asks TMDB again about these.
     `upgrade_state` says which of these applies, and why, for the pending
     view; it is None when the upgrade is off or inert.
+
+    `waits_for_earlier` is True for a pending `Fallback` profile when a
+    profile that runs earlier is pending too: it downloads only when
+    those profiles find no trailer.
     """
 
     profile_id: int
@@ -67,6 +71,7 @@ class ProfileSatisfaction:
     upgrade: bool = False
     awaiting_tmdb: bool = False
     upgrade_state: UpgradeState | None = None
+    waits_for_earlier: bool = False
 
 
 @dataclass
@@ -126,6 +131,7 @@ def evaluate_satisfaction(
     result = SatisfactionResult()
     # A download of a profile that runs earlier, for `Fallback` profiles.
     earlier_download: int | None = None
+    earlier_pending = False
     for profile in sorted(matching_profiles, key=lambda p: p.priority):
         if profile.id in used_profile_ids:
             # satisfied by its own download
@@ -170,8 +176,13 @@ def evaluate_satisfaction(
             continue
         result.unsatisfied.append(profile)
         result.details.append(
-            ProfileSatisfaction(profile_id=profile.id, satisfied=False)
+            ProfileSatisfaction(
+                profile_id=profile.id,
+                satisfied=False,
+                waits_for_earlier=profile.fallback and earlier_pending,
+            )
         )
+        earlier_pending = True
     return result
 
 

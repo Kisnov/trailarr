@@ -260,6 +260,18 @@ class TestFallback:
         assert result.claims == [(8, 1)]
         assert result.unsatisfied == []
 
+    def test_pending_fallback_waits_for_earlier_pending_profile(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        original = make_profile(3, priority=2)
+        media = make_media([])
+        result = evaluate_satisfaction(media, [catalan, spanish, original])
+        assert [d.waits_for_earlier for d in result.details] == [
+            False,
+            True,
+            False,
+        ]
+
     def test_first_profile_with_fallback_on_acts_normally(self):
         catalan = make_profile(1, priority=0, fallback=True)
         media = make_media([])

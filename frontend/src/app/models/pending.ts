@@ -19,6 +19,8 @@ export interface MediaPendingProfile {
   /** Pending only because Upgrade To TMDB Trailer replaces the trailer. */
   upgrade: boolean;
   upgrade_state: UpgradeState | null;
+  /** A Fallback profile that downloads only when the profiles that run earlier find no trailer. */
+  waits_for_earlier: boolean;
   backing_off: boolean;
   attempt_count: number;
   last_error: string | null;
@@ -56,6 +58,8 @@ export interface PendingSummaryItem {
   /** The trailer is on disk, and the download replaces it with a TMDB one. */
   upgrade: boolean;
   upgrade_state: UpgradeState | null;
+  /** A Fallback profile that downloads only when the profiles that run earlier find no trailer. */
+  waits_for_earlier: boolean;
   next_eligible_at: Date | null;
 }
 

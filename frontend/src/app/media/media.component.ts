@@ -74,6 +74,7 @@ export class MediaComponent implements OnInit {
    * has a trailer, so it says "replace", and why. */
   protected previewReason(item: PendingSummaryItem): string {
     if (item.reason === 'backoff') return 'backing off';
+    if (item.waits_for_earlier) return 'would download if earlier profiles find none';
     if (!item.upgrade) return 'would download';
     return item.upgrade_state === 'replace_unknown' ? 'would replace, video unknown' : 'would replace, not a TMDB trailer';
   }

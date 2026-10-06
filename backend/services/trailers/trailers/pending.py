@@ -50,6 +50,9 @@ class MediaPendingProfile(BaseModel):
     # Why the upgrade replaces the trailer, or why it keeps it. None when
     # the upgrade is off or inert.
     upgrade_state: UpgradeState | None = None
+    # A `Fallback` profile that downloads only when the profiles that run
+    # earlier find no trailer.
+    waits_for_earlier: bool = False
     backing_off: bool
     attempt_count: int
     last_error: str | None
@@ -80,6 +83,9 @@ class PendingSummaryItem(BaseModel):
     upgrade: bool = False
     # Why the download replaces the trailer, when it does.
     upgrade_state: UpgradeState | None = None
+    # A `Fallback` profile that downloads only when the profiles that run
+    # earlier find no trailer.
+    waits_for_earlier: bool = False
     next_eligible_at: datetime | None
 
 
@@ -151,12 +157,14 @@ def compute_media_pending(
         detail = details_by_id.get(profile.id)
         upgrade = False
         upgrade_state = None
+        waits_for_earlier = False
         if detail is not None:
             satisfied = detail.satisfied
             satisfied_by = detail.satisfied_by
             satisfied_via = detail.via
             upgrade = detail.upgrade
             upgrade_state = detail.upgrade_state
+            waits_for_earlier = detail.waits_for_earlier
         else:
             satisfied_by = own_download_ids.get(profile.id)
             satisfied = satisfied_by is not None
@@ -178,6 +186,7 @@ def compute_media_pending(
                 pending=pending,
                 upgrade=upgrade,
                 upgrade_state=upgrade_state,
+                waits_for_earlier=waits_for_earlier,
                 backing_off=backing_off,
                 attempt_count=attempt.attempt_count if attempt else 0,
                 last_error=attempt.last_error if attempt else None,
@@ -223,6 +232,9 @@ def compute_library_pending(
             pending_media_ids.add(media.id)
             upgrades = {d.profile_id for d in result.details if d.upgrade}
             states = {d.profile_id: d.upgrade_state for d in result.details}
+            waiting = {
+                d.profile_id for d in result.details if d.waits_for_earlier
+            }
             for profile in result.unsatisfied:
                 attempt = attempts_by_key.get((media.id, profile.id))
                 eligible = is_eligible(attempt)
@@ -240,6 +252,7 @@ def compute_library_pending(
                         reason="pending" if eligible else "backoff",
                         upgrade=profile.id in upgrades,
                         upgrade_state=states.get(profile.id),
+                        waits_for_earlier=profile.id in waiting,
                         next_eligible_at=(
                             next_eligible_at(attempt) if attempt else None
                         ),

@@ -46,10 +46,13 @@ When it is `false`, each matching profile downloads its own trailer. When it is 
 
     A language profile searches YouTube when TMDB lists no trailer in its language. Give each profile a [Search Query](search.md#search-query) and [Include Words in Title](search.md#include-words-in-title) in its language, so that the search fails instead of downloading a trailer in another language. A failed profile is tried again later, as for any failed download.
 
+!!! warning "Every profile that runs earlier counts"
+    A trailer of any matching profile with a lower Priority number stops a fallback profile, also a profile that downloads something else, such as a teaser. Give such profiles a higher Priority number than the profiles of the chain.
+
 !!! note "A trailer that comes later does not replace a fallback trailer"
     The first profile keeps trying, as for any failed download. When the Catalan trailer becomes available after the Spanish one is on disk, Trailarr downloads it too, and the media item has both. Delete the trailer that you do not want.
 
-The [Download Profiles](../../../library/media-details/index.md#download-profiles-section) section of the media details page shows a fallback profile that an earlier trailer covers as satisfied.
+The [Download Profiles](../../../library/media-details/index.md#download-profiles-section) section of the media details page shows a fallback profile that an earlier trailer covers as satisfied. When a profile that runs earlier has no trailer yet, the section says that the fallback profile downloads only if the earlier profiles find no trailer.
 
 ## Retry Count
 

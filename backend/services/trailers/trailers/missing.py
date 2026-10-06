@@ -346,6 +346,14 @@ async def _run_preview_pass() -> None:
                 **logger.media(item.media_id),
             )
             continue
+        if item.waits_for_earlier:
+            logger.info(
+                f"Preview: Trailarr would download '{item.title}' with the"
+                f" fallback profile '{item.profile_name}' if the profiles"
+                " that run earlier find no trailer.",
+                **logger.media(item.media_id),
+            )
+            continue
         logger.info(
             f"Preview: Trailarr would download '{item.title}' with the"
             f" profile '{item.profile_name}'.",
