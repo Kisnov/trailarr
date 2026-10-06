@@ -48,8 +48,9 @@ class ProfileSatisfaction:
 
     Built inside the SAME loop as the decision itself, so the pending
     endpoint / details matrix can never disagree with the download task.
-    `via` is one of "own_download", "claim" when satisfied; None when the
-    profile is unsatisfied (pending).
+    `via` is one of "own_download", "claim" or "fallback" when satisfied;
+    None when the profile is unsatisfied (pending). "fallback" means a
+    `Fallback` profile that an earlier profile's download covers.
 
     `upgrade` is True when the profile is unsatisfied only because its
     trailer is not a TMDB trailer and TMDB lists one. `awaiting_tmdb` is
@@ -57,6 +58,10 @@ class ProfileSatisfaction:
     nothing for it yet — the refresh task asks TMDB again about these.
     `upgrade_state` says which of these applies, and why, for the pending
     view; it is None when the upgrade is off or inert.
+
+    `waits_for_earlier` is True for a pending `Fallback` profile when a
+    profile that runs earlier is pending too: it downloads only when
+    those profiles find no trailer.
     """
 
     profile_id: int
@@ -66,6 +71,7 @@ class ProfileSatisfaction:
     upgrade: bool = False
     awaiting_tmdb: bool = False
     upgrade_state: UpgradeState | None = None
+    waits_for_earlier: bool = False
 
 
 @dataclass
@@ -99,7 +105,8 @@ def evaluate_satisfaction(
     Phase 4 removed the legacy stop-monitoring carve-out: satisfaction is
     purely per-profile ownership now. Users with multiple profiles matching
     the same media get one download per profile — exactly what overlapping
-    profiles configure.
+    profiles configure. A `Fallback` profile is the exception: a download
+    of a matching profile that runs before it satisfies it too.
 
     A profile with `Upgrade To TMDB Trailer` on is satisfied only when one
     of its downloads is a video that the upgrade accepts, or when there is
@@ -122,9 +129,13 @@ def evaluate_satisfaction(
     )
 
     result = SatisfactionResult()
+    # A download of a profile that runs earlier, for `Fallback` profiles.
+    earlier_download: int | None = None
+    earlier_pending = False
     for profile in sorted(matching_profiles, key=lambda p: p.priority):
         if profile.id in used_profile_ids:
             # satisfied by its own download
+            earlier_download = own_download_ids[profile.id]
             owned = [d for d in active if d.profile_id == profile.id]
             detail = ProfileSatisfaction(
                 profile_id=profile.id,
@@ -135,6 +146,17 @@ def evaluate_satisfaction(
             _check_upgrade(detail, profile, owned, videos)
             _add(result, profile, detail)
             continue
+        if profile.fallback and earlier_download:
+            # an earlier profile has a trailer, so this one does not need one
+            result.details.append(
+                ProfileSatisfaction(
+                    profile_id=profile.id,
+                    satisfied=True,
+                    satisfied_by=earlier_download,
+                    via="fallback",
+                )
+            )
+            continue
         if unattributed:
             # satisfied by claiming an existing file. The claim stands
             # even when the file is then upgraded: it is the file of
@@ -142,6 +164,7 @@ def evaluate_satisfaction(
             claimed = unattributed.pop(0)
             result.claims.append((claimed.id, profile.id))
             used_profile_ids.add(profile.id)
+            earlier_download = claimed.id
             detail = ProfileSatisfaction(
                 profile_id=profile.id,
                 satisfied=True,
@@ -153,8 +176,13 @@ def evaluate_satisfaction(
             continue
         result.unsatisfied.append(profile)
         result.details.append(
-            ProfileSatisfaction(profile_id=profile.id, satisfied=False)
+            ProfileSatisfaction(
+                profile_id=profile.id,
+                satisfied=False,
+                waits_for_earlier=profile.fallback and earlier_pending,
+            )
         )
+        earlier_pending = True
     return result
 
 

@@ -69,6 +69,9 @@ export class PendingComponent {
           case 'claim':
             base = 'Will claim an existing unassigned download';
             break;
+          case 'fallback':
+            base = 'A profile that runs earlier has a trailer';
+            break;
           default:
             base = 'Satisfied by an existing download';
         }
@@ -96,6 +99,11 @@ export class PendingComponent {
           return this.isMonitored()
             ? `Will replace the trailer with a TMDB trailer on the next run: ${why}`
             : `Would replace the trailer with a TMDB trailer (${why}), but this item is not monitored`;
+        }
+        if (profile.waits_for_earlier) {
+          return this.isMonitored()
+            ? 'Will download on the next run if the profiles that run earlier find no trailer'
+            : 'Would download if the profiles that run earlier find no trailer, but this item is not monitored';
         }
         return this.isMonitored() ? 'Will download on the next run' : 'Would download, but this item is not monitored';
       case 'disabled':

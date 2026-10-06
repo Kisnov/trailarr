@@ -346,6 +346,14 @@ async def _run_preview_pass() -> None:
                 **logger.media(item.media_id),
             )
             continue
+        if item.waits_for_earlier:
+            logger.info(
+                f"Preview: Trailarr would download '{item.title}' with the"
+                f" fallback profile '{item.profile_name}' if the profiles"
+                " that run earlier find no trailer.",
+                **logger.media(item.media_id),
+            )
+            continue
         logger.info(
             f"Preview: Trailarr would download '{item.title}' with the"
             f" profile '{item.profile_name}'.",
@@ -608,6 +616,17 @@ async def _process_single_media_item(
             )
             return successful_downloads, skipped_items, download_attempts
 
+        _profile_name = profile.customfilter.filter_name
+        if profile.fallback and successful_downloads:
+            logger.info(
+                f"Trailarr skips the fallback profile '{_profile_name}' for"
+                f" '{media.title}'. A profile that runs earlier downloaded a"
+                " trailer.",
+                **logger.media(media.id),
+            )
+            skipped_items += 1
+            continue
+
         check_folder = profile.custom_folder == "{media_folder}"
         if not _is_valid_media(media, check_folder):
             # Validation skips are NOT failed attempts — no backoff recorded
@@ -617,7 +636,6 @@ async def _process_single_media_item(
                 download_attempts,
             )
 
-        _profile_name = profile.customfilter.filter_name
         download_attempted = False
         try:
             logger.info(

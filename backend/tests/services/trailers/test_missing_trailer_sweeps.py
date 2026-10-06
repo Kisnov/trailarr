@@ -11,6 +11,7 @@ import pytest
 from database.models.download import DownloadRead
 from database.models.downloadattempt import DownloadAttemptRead
 from database.models.media import MediaRead
+from exceptions import DownloadFailedError
 from services.satisfaction import SatisfactionResult
 from services.trailers.trailers.missing import (
     _process_single_media_item,
@@ -77,10 +78,12 @@ def _profile(
     *,
     enabled: bool = True,
     resolution: int = 1080,
+    fallback: bool = False,
 ) -> MagicMock:
     profile = MagicMock()
     profile.id = profile_id
     profile.enabled = enabled
+    profile.fallback = fallback
     profile.priority = profile_id
     profile.video_resolution = resolution
     profile.custom_folder = "{media_folder}"
@@ -568,6 +571,54 @@ async def test_declined_download_is_not_counted_as_an_attempt():
     assert result == (0, 0, 0)
     record_failure.assert_not_called()
     sleep_between.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "first_succeeds, downloads, expected",
+    [
+        # the first profile downloaded, so the fallback is skipped
+        (True, 1, (1, 1, 1)),
+        # the first profile failed, so the fallback downloads
+        (False, 2, (1, 1, 2)),
+    ],
+)
+async def test_fallback_profile_runs_only_when_earlier_profiles_fail(
+    first_succeeds, downloads, expected
+):
+    media = _media(1)
+    first = _profile(1)
+    fallback = _profile(2, fallback=True)
+    first.retry_count = fallback.retry_count = 0
+
+    async def download(media, profile, *args, **kwargs):
+        if profile is first and not first_succeeds:
+            raise DownloadFailedError("no trailer in the language")
+        return True
+
+    with (
+        patch(
+            "services.trailers.trailers.missing._is_valid_media",
+            return_value=True,
+        ),
+        patch(
+            "services.trailers.trailers.missing.trailer_downloader"
+            ".download_trailer",
+            new_callable=AsyncMock,
+            side_effect=download,
+        ) as download_trailer,
+        patch(
+            "services.trailers.trailers.missing.attempt_manager.record_failure"
+        ),
+        patch(
+            "services.trailers.trailers.missing.utils.sleep_between_downloads",
+            new_callable=AsyncMock,
+        ),
+    ):
+        result = await _process_single_media_item(media, [first, fallback])
+
+    assert result == expected
+    assert download_trailer.await_count == downloads
 
 
 @pytest.mark.asyncio

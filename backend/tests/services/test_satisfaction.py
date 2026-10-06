@@ -24,9 +24,14 @@ def make_download(
     )
 
 
-def make_profile(profile_id: int, priority: int = 100) -> SimpleNamespace:
+def make_profile(
+    profile_id: int, priority: int = 100, fallback: bool = False
+) -> SimpleNamespace:
     return SimpleNamespace(
-        id=profile_id, priority=priority, upgrade_to_tmdb=False
+        id=profile_id,
+        priority=priority,
+        fallback=fallback,
+        upgrade_to_tmdb=False,
     )
 
 
@@ -187,3 +192,88 @@ class TestSatisfactionDetails:
             "claim",
             None,
         ]
+
+
+class TestFallback:
+    """A `Fallback` profile downloads only when no matching profile that
+    runs before it has a trailer: one per language, first that exists."""
+
+    def test_earlier_download_satisfies_fallback(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        media = make_media([make_download(5, 1)])
+        result = evaluate_satisfaction(media, [spanish, catalan])
+        assert result.unsatisfied == []
+        assert result.details[1].via == "fallback"
+        assert result.details[1].satisfied_by == 5
+
+    def test_fallback_downloads_when_no_earlier_trailer(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        media = make_media([])
+        result = evaluate_satisfaction(media, [catalan, spanish])
+        assert result.unsatisfied == [catalan, spanish]
+
+    def test_chain_stops_at_the_first_trailer(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        original = make_profile(3, priority=2, fallback=True)
+        media = make_media([make_download(6, 2)])
+        result = evaluate_satisfaction(media, [catalan, spanish, original])
+        assert result.unsatisfied == [catalan]
+        assert [d.via for d in result.details] == [
+            None,
+            "own_download",
+            "fallback",
+        ]
+        assert result.details[2].satisfied_by == 6
+
+    def test_later_download_does_not_satisfy_fallback(self):
+        spanish = make_profile(2, priority=1, fallback=True)
+        original = make_profile(3, priority=2)
+        media = make_media([make_download(7, 3)])
+        result = evaluate_satisfaction(media, [spanish, original])
+        assert result.unsatisfied == [spanish]
+
+    def test_fallback_keeps_its_own_download(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        media = make_media([make_download(5, 1), make_download(6, 2)])
+        result = evaluate_satisfaction(media, [catalan, spanish])
+        assert result.details[1].via == "own_download"
+        assert result.details[1].satisfied_by == 6
+
+    def test_claim_by_earlier_profile_satisfies_fallback(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        media = make_media([make_download(8, 0), make_download(9, 0)])
+        result = evaluate_satisfaction(media, [catalan, spanish])
+        assert result.claims == [(8, 1)]
+        assert result.details[1].via == "fallback"
+
+    def test_fallback_claims_when_no_earlier_trailer(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        media = make_media([make_download(8, 0)])
+        result = evaluate_satisfaction(media, [spanish, catalan])
+        # catalan claims the file first, so spanish needs nothing
+        assert result.claims == [(8, 1)]
+        assert result.unsatisfied == []
+
+    def test_pending_fallback_waits_for_earlier_pending_profile(self):
+        catalan = make_profile(1, priority=0)
+        spanish = make_profile(2, priority=1, fallback=True)
+        original = make_profile(3, priority=2)
+        media = make_media([])
+        result = evaluate_satisfaction(media, [catalan, spanish, original])
+        assert [d.waits_for_earlier for d in result.details] == [
+            False,
+            True,
+            False,
+        ]
+
+    def test_first_profile_with_fallback_on_acts_normally(self):
+        catalan = make_profile(1, priority=0, fallback=True)
+        media = make_media([])
+        result = evaluate_satisfaction(media, [catalan])
+        assert result.unsatisfied == [catalan]

@@ -34,11 +34,13 @@ def make_profile(
     enabled: bool = True,
     name: str | None = None,
     filters: list | None = None,
+    fallback: bool = False,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=profile_id,
         priority=priority,
         enabled=enabled,
+        fallback=fallback,
         upgrade_to_tmdb=False,
         replace_unknown_videos=False,
         customfilter=SimpleNamespace(
@@ -106,6 +108,22 @@ class TestComputeMediaPending:
         )
         assert row2.backing_off is False
         assert row2.attempt_count == 0
+
+    def test_fallback_rows(self):
+        first = make_profile(1, priority=0)
+        waiting = make_profile(2, priority=1, fallback=True)
+        media = make_media([])
+        view = compute_media_pending(media, [first, waiting], attempts={})
+        assert [r.waits_for_earlier for r in view.profiles] == [False, True]
+
+        media = make_media([make_download(7, profile_id=1)])
+        view = compute_media_pending(media, [first, waiting], attempts={})
+        row = view.profiles[1]
+        assert (row.satisfied, row.satisfied_by, row.satisfied_via) == (
+            True,
+            7,
+            "fallback",
+        )
 
     def test_backing_off_row_carries_attempt_info(self):
         p1 = make_profile(1)
@@ -212,6 +230,18 @@ class TestComputeLibraryPending:
         assert [
             (i.media_id, i.profile_id, i.reason) for i in summary.items
         ] == [(2, 1, "pending")]
+
+    def test_fallback_item_waits_for_earlier_profiles(self):
+        first = make_profile(1, priority=0)
+        waiting = make_profile(2, priority=1, fallback=True)
+        media = make_media([], media_id=2)
+        patches = _patch_managers([first, waiting], [media])
+        with patches[0], patches[1], patches[2]:
+            summary = compute_library_pending()
+
+        assert [
+            (i.profile_id, i.waits_for_earlier) for i in summary.items
+        ] == [(1, False), (2, True)]
 
     def test_backoff_pairs_counted_separately(self):
         p1 = make_profile(1)
