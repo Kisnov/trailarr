@@ -25,7 +25,7 @@ This setting allows you to enable or disable the profile. Only enabled profiles 
 |:-------:|:--------:|:-------:|:-------------:|
 | Integer | Yes      | 0       | 0 to 999     |
 
-This setting determines the order in which profile is applied when multiple profiles match a media item. Profiles with a higher priority (highest numerical value) will be processed first. 
+This setting determines the order in which profile is applied when multiple profiles match a media item. Profiles with the lowest number are processed first: a profile with priority `0` runs before a profile with priority `1`.
 
 !!! warning
     If two profiles have the same priority, any one of them can be used, so it is recommended to use unique priorities for each profile.
