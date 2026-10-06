@@ -33,6 +33,8 @@ This setting determines the order in which profile is applied when multiple prof
 
 ## Fallback
 
+{{ version_badge("add", "0.13.2") }}
+
 | Type    | Required | Default | Valid Values  |
 |:-------:|:--------:|:-------:|:-------------:|
 | Boolean | Yes      | false   | true, false   |
