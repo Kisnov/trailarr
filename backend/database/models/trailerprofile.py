@@ -68,6 +68,13 @@ class _TrailerProfileBase(AppSQLModel):
         le=1000,
         sa_column=Column(Integer, server_default="0", nullable=False),
     )
+    # Download only when no matching profile that runs before this one has
+    # a trailer for the media item. Profiles run in priority order, lowest
+    # number first, so a chain of fallback profiles keeps one trailer.
+    fallback: bool = Field(
+        default=False,
+        sa_column=Column(Boolean, server_default="0", nullable=False),
+    )
     retry_count: int = Field(
         default=2,
         ge=0,
@@ -225,6 +232,7 @@ class TrailerProfile(_TrailerProfileBase, table=True):
         """
         return field_name in [
             "enabled",
+            "fallback",
             "folder_enabled",
             "subtitles_enabled",
             "subtitles_auto_generated",
@@ -254,6 +262,7 @@ class TrailerProfile(_TrailerProfileBase, table=True):
 
     @field_validator(
         "enabled",
+        "fallback",
         "folder_enabled",
         "subtitles_enabled",
         "subtitles_auto_generated",

@@ -6,6 +6,7 @@ export interface TrailerProfileRead {
   customfilter: CustomFilter;
   enabled?: boolean;
   priority?: number;
+  fallback?: boolean;
   retry_count?: number;
   file_format?: string;
   file_name?: string;
@@ -46,6 +47,7 @@ export interface TrailerProfileCreate {
   customfilter: CustomFilterCreate;
   enabled?: boolean;
   priority?: number;
+  fallback?: boolean;
   retry_count?: number;
   file_format?: string;
   file_name?: string;

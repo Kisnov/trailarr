@@ -31,6 +31,26 @@ This setting determines the order in which profile is applied when multiple prof
     If two profiles have the same priority, any one of them can be used, so it is recommended to use unique priorities for each profile.
 
 
+## Fallback
+
+| Type    | Required | Default | Valid Values  |
+|:-------:|:--------:|:-------:|:-------------:|
+| Boolean | Yes      | false   | true, false   |
+
+Download a trailer with this profile only when no matching profile that runs before it has a trailer for the media item. Use it to get one trailer per media item from a list of choices, such as a list of languages in order of preference.
+
+When it is `false`, each matching profile downloads its own trailer. When it is `true`, the profile downloads only when every matching profile with a lower [Priority](#priority) number has no trailer on disk. In one run of the [Download Missing Trailers](../../../tasks/index.md#download-missing-trailers) task, the profile also does nothing when a profile that runs earlier downloads a trailer for the same media item.
+
+!!! example "Catalan, then Spanish, then the original language"
+    Make three profiles with the same filters. Set the [Trailer Language](#trailer-language) to `ca`, `es` and `en`, and the Priority to `0`, `1` and `2`. Turn on `Fallback` in the Spanish and English profiles. Trailarr tries Catalan first. When Catalan fails, it tries Spanish, and when Spanish fails too, English.
+
+    A language profile searches YouTube when TMDB lists no trailer in its language. Give each profile a [Search Query](search.md#search-query) and [Include Words in Title](search.md#include-words-in-title) in its language, so that the search fails instead of downloading a trailer in another language. A failed profile is tried again later, as for any failed download.
+
+!!! note "A trailer that comes later does not replace a fallback trailer"
+    The first profile keeps trying, as for any failed download. When the Catalan trailer becomes available after the Spanish one is on disk, Trailarr downloads it too, and the media item has both. Delete the trailer that you do not want.
+
+The [Download Profiles](../../../library/media-details/index.md#download-profiles-section) section of the media details page shows a fallback profile that an earlier trailer covers as satisfied.
+
 ## Retry Count
 
 {{ version_badge("add", "0.6.10") }}

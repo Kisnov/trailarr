@@ -43,7 +43,7 @@ class MediaPendingProfile(BaseModel):
     matches: bool
     satisfied: bool
     satisfied_by: int | None  # download id
-    satisfied_via: str | None  # "own_download" | "claim"
+    satisfied_via: str | None  # "own_download" | "claim" | "fallback"
     pending: bool
     # Pending only because `Upgrade To TMDB Trailer` replaces the trailer.
     upgrade: bool = False

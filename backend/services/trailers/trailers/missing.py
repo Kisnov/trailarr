@@ -608,6 +608,17 @@ async def _process_single_media_item(
             )
             return successful_downloads, skipped_items, download_attempts
 
+        _profile_name = profile.customfilter.filter_name
+        if profile.fallback and successful_downloads:
+            logger.info(
+                f"Trailarr skips the fallback profile '{_profile_name}' for"
+                f" '{media.title}'. A profile that runs earlier downloaded a"
+                " trailer.",
+                **logger.media(media.id),
+            )
+            skipped_items += 1
+            continue
+
         check_folder = profile.custom_folder == "{media_folder}"
         if not _is_valid_media(media, check_folder):
             # Validation skips are NOT failed attempts — no backoff recorded
@@ -617,7 +628,6 @@ async def _process_single_media_item(
                 download_attempts,
             )
 
-        _profile_name = profile.customfilter.filter_name
         download_attempted = False
         try:
             logger.info(

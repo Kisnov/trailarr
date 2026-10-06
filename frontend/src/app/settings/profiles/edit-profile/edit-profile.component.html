@@ -62,6 +62,14 @@
         [disabled]="false"
         (onSubmit)="profileService.updateSetting('priority', $event)"
       />
+      <app-options-setting
+        name="Fallback"
+        description="Download only when no matching profile that runs earlier has a trailer for the media item."
+        descriptionExtra="Profiles run lowest priority number first. Give the profiles you want in order, such as one per language, the priority numbers in that order, and turn this on for all but the first."
+        [options]="trueFalseOptions"
+        [selectedOption]="profile()?.fallback"
+        (optionChange)="profileService.updateSetting('fallback', $event)"
+      />
       <app-text-setting
         name="Retry Count"
         description="Download retry count when a download fails while using this profile."

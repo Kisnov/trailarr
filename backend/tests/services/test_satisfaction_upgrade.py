@@ -38,6 +38,7 @@ def make_profile(
     return SimpleNamespace(
         id=profile_id,
         priority=100,
+        fallback=False,
         upgrade_to_tmdb=upgrade,
         language=language,
         always_search=always_search,

@@ -39,6 +39,7 @@ def make_profile(
         id=profile_id,
         priority=priority,
         enabled=enabled,
+        fallback=False,
         upgrade_to_tmdb=False,
         replace_unknown_videos=False,
         customfilter=SimpleNamespace(

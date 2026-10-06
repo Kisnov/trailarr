@@ -14,7 +14,7 @@ export interface MediaPendingProfile {
   matches: boolean;
   satisfied: boolean;
   satisfied_by: number | null; // download id
-  satisfied_via: 'own_download' | 'claim' | null;
+  satisfied_via: 'own_download' | 'claim' | 'fallback' | null;
   pending: boolean;
   /** Pending only because Upgrade To TMDB Trailer replaces the trailer. */
   upgrade: boolean;
